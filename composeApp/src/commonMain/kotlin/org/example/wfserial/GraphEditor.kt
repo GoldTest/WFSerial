@@ -30,10 +30,10 @@ import kotlinx.datetime.Clock
 import kotlin.math.roundToInt
 
 @Composable
-fun GraphEditor(viewModel: SerializerViewModel) {
-    var graphName by remember { mutableStateOf("") }
-    var nodes by remember { mutableStateOf(mapOf<String, Node>()) }
-    var startNodeId by remember { mutableStateOf("") }
+fun GraphEditor(viewModel: SerializerViewModel, initialGraph: Graph? = null) {
+    var graphName by remember { mutableStateOf(initialGraph?.name ?: "") }
+    var nodes by remember { mutableStateOf(initialGraph?.nodes ?: mapOf<String, Node>()) }
+    var startNodeId by remember { mutableStateOf(initialGraph?.startNodeId ?: "") }
     
     var showNodeDialog by remember { mutableStateOf(false) }
     var editingNode by remember { mutableStateOf<Node?>(null) }
@@ -84,20 +84,24 @@ fun GraphEditor(viewModel: SerializerViewModel) {
         Button(
             onClick = {
                 if (graphName.isNotBlank() && nodes.isNotEmpty()) {
-                    val newGraph = Graph(
-                        id = Clock.System.now().toEpochMilliseconds().toString(),
+                    val finalGraph = Graph(
+                        id = initialGraph?.id ?: Clock.System.now().toEpochMilliseconds().toString(),
                         name = graphName,
                         nodes = nodes,
                         startNodeId = startNodeId.ifBlank { nodes.keys.first() }
                     )
-                    viewModel.addGraph(newGraph)
+                    if (initialGraph != null) {
+                        viewModel.updateGraph(finalGraph)
+                    } else {
+                        viewModel.addGraph(finalGraph)
+                    }
                     viewModel.isEditing = false
                 }
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = graphName.isNotBlank() && nodes.isNotEmpty()
         ) {
-            Text("保存并发布图")
+            Text(if (initialGraph != null) "保存修改" else "保存并发布图")
         }
     }
 
@@ -108,6 +112,10 @@ fun GraphEditor(viewModel: SerializerViewModel) {
             onDismiss = { showNodeDialog = false },
             onSave = { newNode ->
                 nodes = nodes + (newNode.id to newNode)
+                showNodeDialog = false
+            },
+            onDelete = { nodeId ->
+                nodes = nodes - nodeId
                 showNodeDialog = false
             }
         )
@@ -425,7 +433,8 @@ fun NodeDialog(
     node: Node, 
     allNodes: List<Node>,
     onDismiss: () -> Unit, 
-    onSave: (Node) -> Unit
+    onSave: (Node) -> Unit,
+    onDelete: (String) -> Unit
 ) {
     var description by remember { mutableStateOf(node.description) }
     var isConclusion by remember { mutableStateOf(node.isConclusion) }
@@ -435,7 +444,7 @@ fun NodeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("编辑节点属性") },
+        title = { Text(if (node.description.isBlank()) "添加节点" else "编辑节点属性") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -489,9 +498,16 @@ fun NodeDialog(
                     yesNodeId = if (!isConclusion) yesId else null,
                     noNodeId = if (!isConclusion) noId else null
                 ))
-            }) { Text("确定") }
+            }) { Text("保存") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = {
+            Row {
+                TextButton(onClick = { onDelete(node.id) }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                    Text("删除")
+                }
+                TextButton(onClick = onDismiss) { Text("取消") }
+            }
+        }
     )
 }
 

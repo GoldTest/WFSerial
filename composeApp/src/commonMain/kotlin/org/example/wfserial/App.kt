@@ -372,6 +372,7 @@ fun EmptyState(viewModel: SerializerViewModel) {
 @Composable
 fun EditorOverlay(viewModel: SerializerViewModel) {
     var showCreator by remember { mutableStateOf(false) }
+    var editingGraph by remember { mutableStateOf<Graph?>(null) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -379,16 +380,26 @@ fun EditorOverlay(viewModel: SerializerViewModel) {
     ) {
         Column(modifier = Modifier.padding(24.dp).fillMaxSize()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (showCreator) "创建新图" else "图列表", style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    text = when {
+                        editingGraph != null -> "编辑图: ${editingGraph?.name}"
+                        showCreator -> "创建新图"
+                        else -> "图列表"
+                    }, 
+                    style = MaterialTheme.typography.headlineMedium
+                )
                 Spacer(Modifier.weight(1f))
-                if (showCreator) {
-                    TextButton(onClick = { showCreator = false }) { Text("返回列表") }
+                if (showCreator || editingGraph != null) {
+                    TextButton(onClick = { 
+                        showCreator = false
+                        editingGraph = null
+                    }) { Text("返回列表") }
                 }
                 TextButton(onClick = { viewModel.isEditing = false }) { Text("关闭") }
             }
             
-            if (showCreator) {
-                GraphEditor(viewModel)
+            if (showCreator || editingGraph != null) {
+                GraphEditor(viewModel, initialGraph = editingGraph)
             } else {
                 // Add a simple default graph for testing if empty
                 if (viewModel.graphs.isEmpty()) {
@@ -425,10 +436,27 @@ fun EditorOverlay(viewModel: SerializerViewModel) {
                 LazyColumn {
                     items(viewModel.graphs) { graph ->
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            onClick = { viewModel.selectGraph(graph); viewModel.isEditing = false }
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                         ) {
-                            Text(graph.name, modifier = Modifier.padding(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    graph.name, 
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Row {
+                                    IconButton(onClick = { viewModel.selectGraph(graph); viewModel.isEditing = false }) {
+                                        Icon(Icons.Default.PlayArrow, "运行", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                    IconButton(onClick = { editingGraph = graph }) {
+                                        Icon(Icons.Default.Edit, "编辑")
+                                    }
+                                }
+                            }
                         }
                     }
                 }
