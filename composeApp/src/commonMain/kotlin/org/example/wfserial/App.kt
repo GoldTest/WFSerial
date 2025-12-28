@@ -303,8 +303,8 @@ fun ActualCard(node: Node, isCurrent: Boolean, viewModel: SerializerViewModel) {
     val swipeProgress = (offsetX / 200f).coerceIn(-1f, 1f)
     
     val borderColor = when {
-        swipeProgress > 0.1f -> Color.Green.copy(alpha = swipeProgress)
-        swipeProgress < -0.1f -> Color.Red.copy(alpha = -swipeProgress)
+        swipeProgress < -0.1f -> Color.Green.copy(alpha = -swipeProgress) // Left -> YES (Green)
+        swipeProgress > 0.1f -> Color.Red.copy(alpha = swipeProgress)    // Right -> NO (Red)
         else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
     }
 
@@ -331,11 +331,11 @@ fun ActualCard(node: Node, isCurrent: Boolean, viewModel: SerializerViewModel) {
                             offsetX += dragAmount.x
                         },
                         onDragEnd = {
-                            if (offsetX > 180) {
-                                // Swipe Right -> YES
+                            if (offsetX < -180) {
+                                // Swipe Left -> YES
                                 viewModel.onChoice(true)
-                            } else if (offsetX < -180) {
-                                // Swipe Left -> NO
+                            } else if (offsetX > 180) {
+                                // Swipe Right -> NO
                                 viewModel.onChoice(false)
                             }
                             offsetX = 0f
@@ -404,20 +404,20 @@ fun ActualCard(node: Node, isCurrent: Boolean, viewModel: SerializerViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // NO Side (Left)
-                InteractionIcon(
-                    icon = Icons.Default.Close,
-                    label = "NO",
-                    color = Color.Red,
-                    progress = (-swipeProgress).coerceIn(0f, 1f),
-                    isLeft = true
-                )
-
-                // YES Side (Right)
+                // YES Side (Left)
                 InteractionIcon(
                     icon = Icons.Default.Check,
                     label = "YES",
                     color = Color.Green,
+                    progress = (-swipeProgress).coerceIn(0f, 1f),
+                    isLeft = true
+                )
+
+                // NO Side (Right)
+                InteractionIcon(
+                    icon = Icons.Default.Close,
+                    label = "NO",
+                    color = Color.Red,
                     progress = swipeProgress.coerceIn(0f, 1f),
                     isLeft = false
                 )
