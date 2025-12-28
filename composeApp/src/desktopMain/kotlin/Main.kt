@@ -4,8 +4,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.res.loadImageBitmap
-import androidx.compose.ui.res.useResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
 import org.example.wfserial.SerializerViewModel
@@ -13,15 +12,8 @@ import org.example.wfserial.SerializerViewModel
 fun main() = application {
     val viewModel = remember { SerializerViewModel() }
     var isOpen by remember { mutableStateOf(true) }
-    val icon = remember {
-        useResource("tray_icon.png") { 
-            // Simplified for now, in a real project you'd use a PNG or convert SVG
-            // For Desktop Compose, we'll try to load a painter.
-            // Since we don't have a converter tool, I'll use a placeholder or assume the user might provide one.
-            // But let's try to load what we have or just use default.
-            null
-        }
-    }
+    
+    val appIcon = painterResource("tray_icon.png")
 
     val state = rememberWindowState(
         width = 800.dp,
@@ -33,7 +25,7 @@ fun main() = application {
         Window(
             onCloseRequest = { isOpen = false },
             state = state,
-            icon = icon,
+            icon = appIcon,
             title = "WFSerial",
             resizable = true
         ) {
@@ -42,19 +34,13 @@ fun main() = application {
     }
 
     Tray(
-        icon = TrayIcon,
-        onAction = { isOpen = true }, // Double-click to open
+        icon = appIcon,
+        tooltip = "WFSerial",
+        onAction = { isOpen = true },
         menu = {
             Item("Show", onClick = { isOpen = true })
+            Separator()
             Item("Exit", onClick = { exitApplication() })
         }
     )
-}
-
-// Fallback Icon for demo purposes
-object TrayIcon : androidx.compose.ui.graphics.painter.Painter() {
-    override val intrinsicSize = androidx.compose.ui.geometry.Size(256f, 256f)
-    override fun androidx.compose.ui.graphics.drawscope.DrawScope.onDraw() {
-        drawCircle(androidx.compose.ui.graphics.Color(0xFF2196F3))
-    }
 }
