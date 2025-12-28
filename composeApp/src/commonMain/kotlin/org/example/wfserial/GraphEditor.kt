@@ -1,3 +1,5 @@
+package org.example.wfserial
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -53,24 +55,28 @@ fun GraphEditor(viewModel: SerializerViewModel) {
         
         Spacer(Modifier.height(16.dp))
         
-        if (isVisualMode) {
-            VisualEditor(
-                nodes = nodes,
-                onNodesChange = { nodes = it },
-                onEditNode = { node ->
-                    editingNode = node
-                    showNodeDialog = true
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            if (isVisualMode) {
+                VisualEditor(
+                    nodes = nodes,
+                    onNodesChange = { nodes = it },
+                    onEditNode = { node ->
+                        editingNode = node
+                        showNodeDialog = true
+                    }
+                )
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    ListEditor(
+                        nodes = nodes,
+                        onNodesChange = { nodes = it },
+                        onEditNode = { node ->
+                            editingNode = node
+                            showNodeDialog = true
+                        }
+                    )
                 }
-            )
-        } else {
-            ListEditor(
-                nodes = nodes,
-                onNodesChange = { nodes = it },
-                onEditNode = { node ->
-                    editingNode = node
-                    showNodeDialog = true
-                }
-            )
+            }
         }
         
         Spacer(Modifier.height(16.dp))
@@ -114,59 +120,102 @@ fun VisualEditor(
     onNodesChange: (Map<String, Node>) -> Unit,
     onEditNode: (Node) -> Unit
 ) {
+    var draggingConnectionFrom by remember { mutableStateOf<Pair<Node, Boolean>?>(null) } // Node and isYes
+    var dragEndOffset by remember { mutableStateOf(Offset.Zero) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val nodeWidthPx = with(density) { 160.dp.toPx() }
+    val nodeHeightPx = with(density) { 100.dp.toPx() }
+
+    // 使用 rememberUpdatedState 确保回调和数据始终是最新的，避免闭包捕获旧状态
+    val currentNodes by rememberUpdatedState(nodes)
+    val currentOnNodesChange by rememberUpdatedState(onNodesChange)
+
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .weight(1f)
+            .fillMaxSize()
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
-            .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    // Optional: Pan the whole view
-                }
-            }
     ) {
         // Draw Connections
         Canvas(modifier = Modifier.fillMaxSize()) {
-            nodes.values.forEach { node ->
-                val start = Offset(node.visualX + 80, node.visualY + 40)
-                
+            currentNodes.values.forEach { node ->
                 // Draw YES connection (Green)
                 node.yesNodeId?.let { targetId ->
-                    nodes[targetId]?.let { target ->
-                        val end = Offset(target.visualX + 80, target.visualY + 40)
+                    currentNodes[targetId]?.let { target ->
+                        val start = Offset(node.visualX + nodeWidthPx * 0.25f, node.visualY + nodeHeightPx * 0.8f)
+                        val end = Offset(target.visualX + nodeWidthPx * 0.5f, target.visualY)
                         drawConnection(start, end, Color.Green.copy(alpha = 0.5f))
                     }
                 }
                 
                 // Draw NO connection (Red)
                 node.noNodeId?.let { targetId ->
-                    nodes[targetId]?.let { target ->
-                        val end = Offset(target.visualX + 80, target.visualY + 40)
+                    currentNodes[targetId]?.let { target ->
+                        val start = Offset(node.visualX + nodeWidthPx * 0.75f, node.visualY + nodeHeightPx * 0.8f)
+                        val end = Offset(target.visualX + nodeWidthPx * 0.5f, target.visualY)
                         drawConnection(start, end, Color.Red.copy(alpha = 0.5f))
                     }
                 }
             }
+
+            // Draw current dragging line
+            draggingConnectionFrom?.let { (sourceNode, isYes) ->
+                val start = if (isYes) 
+                    Offset(sourceNode.visualX + nodeWidthPx * 0.25f, sourceNode.visualY + nodeHeightPx * 0.8f)
+                else 
+                    Offset(sourceNode.visualX + nodeWidthPx * 0.75f, sourceNode.visualY + nodeHeightPx * 0.8f)
+                drawConnection(start, dragEndOffset, if (isYes) Color.Green else Color.Red)
+            }
         }
 
         // Draw Nodes
-        nodes.values.forEach { node ->
-            NodeVisual(
-                node = node,
-                onMove = { newX, newY ->
-                    onNodesChange(nodes + (node.id to node.copy(visualX = newX, visualY = newY)))
-                },
-                onEdit = { onEditNode(node) },
-                onDelete = { onNodesChange(nodes - node.id) }
-            )
+        for (node in currentNodes.values) {
+            key(node.id) {
+                NodeVisual(
+                    node = node,
+                    onMove = { newX, newY ->
+                        currentOnNodesChange(currentNodes + (node.id to node.copy(visualX = newX, visualY = newY)))
+                    },
+                    onEdit = { onEditNode(node) },
+                    onDelete = { currentOnNodesChange(currentNodes - node.id) },
+                    onStartConnect = { isYes, startOffset ->
+                        draggingConnectionFrom = node to isYes
+                        dragEndOffset = startOffset
+                    },
+                    onDraggingConnect = { offset ->
+                        dragEndOffset = offset
+                    },
+                    onEndConnect = { _ ->
+                        // Check if dropped on another node
+                        val targetNode = currentNodes.values.find { target ->
+                            dragEndOffset.x >= target.visualX && dragEndOffset.x <= target.visualX + nodeWidthPx &&
+                            dragEndOffset.y >= target.visualY && dragEndOffset.y <= target.visualY + nodeHeightPx &&
+                            target.id != draggingConnectionFrom?.first?.id
+                        }
+                        
+                        if (targetNode != null && draggingConnectionFrom != null) {
+                            val (source, isYes) = draggingConnectionFrom!!
+                            val updatedNode = if (isYes) {
+                                source.copy(yesNodeId = targetNode.id, isConclusion = false)
+                            } else {
+                                source.copy(noNodeId = targetNode.id, isConclusion = false)
+                            }
+                            currentOnNodesChange(currentNodes + (source.id to updatedNode))
+                        }
+                        draggingConnectionFrom = null
+                    }
+                )
+            }
         }
 
         // Add Node Button
         FloatingActionButton(
             onClick = {
-                val newId = (nodes.size + 1).toString()
-                onEditNode(Node(id = newId, description = "", visualX = 50f, visualY = 50f))
+                val newId = Clock.System.now().toEpochMilliseconds().toString()
+                // 根据节点数量偏移，避免重叠
+                val offset = (currentNodes.size * 40).toFloat() % 400
+                onEditNode(Node(id = newId, description = "新节点", visualX = 100f + offset, visualY = 100f + offset))
             },
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
             containerColor = MaterialTheme.colorScheme.primary
@@ -179,10 +228,10 @@ fun VisualEditor(
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawConnection(start: Offset, end: Offset, color: Color) {
     val path = Path().apply {
         moveTo(start.x, start.y)
-        // Bezier curve for smoother lines
+        val controlY = (start.y + end.y) / 2
         cubicTo(
-            start.x, (start.y + end.y) / 2,
-            end.x, (start.y + end.y) / 2,
+            start.x, controlY,
+            end.x, controlY,
             end.x, end.y
         )
     }
@@ -194,80 +243,155 @@ fun NodeVisual(
     node: Node,
     onMove: (Float, Float) -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onStartConnect: (Boolean, Offset) -> Unit,
+    onDraggingConnect: (Offset) -> Unit,
+    onEndConnect: (Offset) -> Unit
 ) {
-    Card(
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val nodeWidthPx = with(density) { 160.dp.toPx() }
+    val nodeHeightPx = with(density) { 100.dp.toPx() }
+
+    // 使用 rememberUpdatedState 确保闭包始终访问最新的数据和回调
+    val currentNode by rememberUpdatedState(node)
+    val currentOnMove by rememberUpdatedState(onMove)
+    val currentOnStartConnect by rememberUpdatedState(onStartConnect)
+    val currentOnDraggingConnect by rememberUpdatedState(onDraggingConnect)
+    val currentOnEndConnect by rememberUpdatedState(onEndConnect)
+
+    Box(
         modifier = Modifier
-            .offset { IntOffset(node.visualX.roundToInt(), node.visualY.roundToInt()) }
+            .offset { IntOffset(currentNode.visualX.roundToInt(), currentNode.visualY.roundToInt()) }
             .width(160.dp)
-            .pointerInput(node.id) {
+            .height(100.dp)
+            .pointerInput(Unit) { // 使用 Unit 作为 key，配合 rememberUpdatedState 避免手势丢失
                 detectDragGestures { change, dragAmount ->
                     change.consume()
-                    onMove(node.visualX + dragAmount.x, node.visualY + dragAmount.y)
-                }
-            },
-        colors = CardDefaults.cardColors(
-            containerColor = if (node.isConclusion) 
-                MaterialTheme.colorScheme.tertiaryContainer 
-            else MaterialTheme.colorScheme.secondaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "ID: ${node.id}", 
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = onEdit, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Edit, null, modifier = Modifier.size(14.dp))
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp))
+                    currentOnMove(currentNode.visualX + dragAmount.x, currentNode.visualY + dragAmount.y)
                 }
             }
-            Text(
-                text = if (node.isConclusion) "🏁 ${node.result}" else node.description,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 2,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 14.sp
-            )
+    ) {
+        Card(
+            modifier = Modifier.fillMaxSize(),
+            colors = CardDefaults.cardColors(
+                containerColor = if (currentNode.isConclusion) 
+                    MaterialTheme.colorScheme.tertiaryContainer 
+                else MaterialTheme.colorScheme.secondaryContainer
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Column(modifier = Modifier.padding(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "ID: ${currentNode.id}", 
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = onEdit, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(14.dp))
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp))
+                    }
+                }
+                Text(
+                    text = if (currentNode.isConclusion) "🏁 ${currentNode.result}" else currentNode.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 14.sp
+                )
+            }
+        }
+
+        if (!currentNode.isConclusion) {
+            // Connection Ports
+            Row(
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // YES Port
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.Green.copy(alpha = 0.7f))
+                        .pointerInput(Unit) {
+                            detectDragGestures(
+                                onDragStart = { _ ->
+                                    currentOnStartConnect(true, Offset(currentNode.visualX + nodeWidthPx * 0.25f, currentNode.visualY + nodeHeightPx * 0.8f))
+                                },
+                                onDrag = { change, _ ->
+                                    change.consume()
+                                    val currentGlobal = Offset(currentNode.visualX + nodeWidthPx * 0.25f + change.position.x, currentNode.visualY + nodeHeightPx * 0.8f + change.position.y)
+                                    currentOnDraggingConnect(currentGlobal)
+                                },
+                                onDragEnd = { currentOnEndConnect(Offset.Zero) },
+                                onDragCancel = { currentOnEndConnect(Offset.Zero) }
+                            )
+                        }
+                ) {
+                    Text("Y", modifier = Modifier.align(Alignment.Center), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // NO Port
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.Red.copy(alpha = 0.7f))
+                        .pointerInput(Unit) {
+                            detectDragGestures(
+                                onDragStart = { _ ->
+                                    currentOnStartConnect(false, Offset(currentNode.visualX + nodeWidthPx * 0.75f, currentNode.visualY + nodeHeightPx * 0.8f))
+                                },
+                                onDrag = { change, _ ->
+                                    change.consume()
+                                    val currentGlobal = Offset(currentNode.visualX + nodeWidthPx * 0.75f + change.position.x, currentNode.visualY + nodeHeightPx * 0.8f + change.position.y)
+                                    currentOnDraggingConnect(currentGlobal)
+                                },
+                                onDragEnd = { currentOnEndConnect(Offset.Zero) },
+                                onDragCancel = { currentOnEndConnect(Offset.Zero) }
+                            )
+                        }
+                ) {
+                    Text("N", modifier = Modifier.align(Alignment.Center), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
 
+
 @Composable
-fun ListEditor(
+fun ColumnScope.ListEditor(
     nodes: Map<String, Node>,
     onNodesChange: (Map<String, Node>) -> Unit,
     onEditNode: (Node) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth().weight(1f)) {
-        Button(onClick = { 
-            onEditNode(Node(id = (nodes.size + 1).toString(), description = ""))
-        }) {
-            Icon(Icons.Default.Add, null)
-            Text("添加节点")
-        }
-        
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(nodes.values.toList()) { node ->
-                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(node.description, fontWeight = FontWeight.Bold)
-                            Text("ID: ${node.id} | ${if(node.isConclusion) "结论: ${node.result}" else "Yes: ${node.yesNodeId}, No: ${node.noNodeId}"}")
-                        }
-                        IconButton(onClick = { onEditNode(node) }) {
-                            Icon(Icons.Default.Edit, null)
-                        }
-                        IconButton(onClick = { onNodesChange(nodes - node.id) }) {
-                            Icon(Icons.Default.Delete, null)
-                        }
+    Button(onClick = { 
+        val newId = (Clock.System.now().toEpochMilliseconds() % 10000).toString()
+        onEditNode(Node(id = newId, description = "新节点"))
+    }) {
+        Icon(Icons.Default.Add, null)
+        Text("添加节点")
+    }
+    
+    LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+        items(nodes.values.toList()) { node ->
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(node.description, fontWeight = FontWeight.Bold)
+                        Text("ID: ${node.id} | ${if(node.isConclusion) "结论: ${node.result}" else "Yes: ${node.yesNodeId}, No: ${node.noNodeId}"}")
+                    }
+                    IconButton(onClick = { onEditNode(node) }) {
+                        Icon(Icons.Default.Edit, null)
+                    }
+                    IconButton(onClick = { onNodesChange(nodes - node.id) }) {
+                        Icon(Icons.Default.Delete, null)
                     }
                 }
             }
@@ -314,7 +438,6 @@ fun NodeDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                 } else {
-                    // Simple Dropdowns or TextFields for IDs
                     OutlinedTextField(
                         value = yesId, 
                         onValueChange = { yesId = it }, 
@@ -350,4 +473,5 @@ fun NodeDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
     )
 }
+
 
