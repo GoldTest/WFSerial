@@ -40,8 +40,8 @@ jobs:
           } 
  
       - name: Build and Package 
-        # 同时打包 Windows (Exe, Msi) 和 Android Release APK
-        run: ./gradlew :composeApp:packageReleaseExe :composeApp:packageReleaseMsi :composeApp:assembleRelease --no-daemon 
+        # 同时打包 Windows (Exe, Msi, Portable Zip) 和 Android Release APK
+        run: ./gradlew :composeApp:packageReleaseExe :composeApp:packageReleaseMsi :composeApp:packageReleasePortable :composeApp:assembleRelease --no-daemon 
         env: 
           ANDROID_SIGNING_STORE_FILE: "release.keystore" 
           ANDROID_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }} 
@@ -65,6 +65,10 @@ jobs:
             if (Test-Path composeApp/build/outputs/apk/release/*.apk) { 
               copy composeApp/build/outputs/apk/release/*.apk release-artifacts/ 
             } 
+            # Copy Portable Zip 
+            if (Test-Path composeApp/build/compose/binaries/main/zip/*.zip) { 
+              copy composeApp/build/compose/binaries/main/zip/*.zip release-artifacts/ 
+            } 
  
       - name: Create Release 
         uses: softprops/action-gh-release@v1 
@@ -73,6 +77,7 @@ jobs:
             release-artifacts/*.exe 
             release-artifacts/*.msi 
             release-artifacts/*.apk 
+            release-artifacts/*.zip 
           draft: false 
           prerelease: false 
         env: 
