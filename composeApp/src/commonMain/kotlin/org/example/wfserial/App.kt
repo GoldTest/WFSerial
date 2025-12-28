@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
 @Composable
-fun App(viewModel: SerializerViewModel = remember { SerializerViewModel() }) {
+fun App(viewModel: SerializerViewModel) {
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Color(0xFFBB86FC),
@@ -447,6 +447,11 @@ fun HistoryOverlay(viewModel: SerializerViewModel) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("历史路径", style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.weight(1f))
+                if (viewModel.history.isNotEmpty()) {
+                    TextButton(onClick = { viewModel.clearAllHistory() }) { 
+                        Text("清空全部", color = MaterialTheme.colorScheme.error) 
+                    }
+                }
                 TextButton(onClick = { viewModel.showHistory = false }) { Text("关闭") }
             }
             
@@ -455,10 +460,22 @@ fun HistoryOverlay(viewModel: SerializerViewModel) {
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(entry.graphName, fontWeight = FontWeight.Bold)
-                            Text("结果: ${entry.result}", color = MaterialTheme.colorScheme.secondary)
-                            Text("路径: ${entry.path.joinToString(" -> ")}", style = MaterialTheme.typography.bodySmall)
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(entry.graphName, fontWeight = FontWeight.Bold)
+                                Text("结果: ${entry.result}", color = MaterialTheme.colorScheme.secondary)
+                                Text("路径: ${entry.path.joinToString(" -> ")}", style = MaterialTheme.typography.bodySmall)
+                            }
+                            IconButton(onClick = { viewModel.deleteHistoryEntry(entry) }) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "删除记录",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                                )
+                            }
                         }
                     }
                 }

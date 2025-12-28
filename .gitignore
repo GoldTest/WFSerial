@@ -1,0 +1,32 @@
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/resources/
+!**/src/test/resources/
+
+### Android ###
+captures/
+.externalNativeBuild
+.cxx
+local.properties
+.navigation
+.assetContents
+
+### macOS ###
+.DS_Store
+
+### Windows ###
+Thumbs.db
+Desktop.ini
+
+### Kotlin ###
+.kotlin

@@ -109,4 +109,14 @@ class SerializerViewModel {
         }
         saveData()
     }
+
+    fun deleteHistoryEntry(entry: HistoryEntry) {
+        history = history.filter { it !== entry }
+        saveData()
+    }
+
+    fun clearAllHistory() {
+        history = emptyList()
+        saveData()
+    }
 }
