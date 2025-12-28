@@ -9,6 +9,44 @@ expect fun ShaderBackground(
     shaderCode: String = DefaultShader
 )
 
+fun processShaderCode(code: String): String {
+    if (code.isBlank()) return DefaultShader
+    
+    // 检查是否包含 Shadertoy 的 mainImage
+    val hasMainImage = code.contains("mainImage")
+    // 检查是否包含 AGSL 的 main
+    val hasMain = code.contains("vec4 main")
+    
+    var processed = code
+    
+    // 自动补全 Uniform 声明
+    val uniforms = mutableListOf<String>()
+    if (!code.contains("uniform float2 iResolution") && !code.contains("uniform vec2 iResolution")) {
+        uniforms.add("uniform float2 iResolution;")
+    }
+    if (!code.contains("uniform float iTime")) {
+        uniforms.add("uniform float iTime;")
+    }
+    
+    if (uniforms.isNotEmpty()) {
+        processed = uniforms.joinToString("\n") + "\n" + processed
+    }
+    
+    // 如果只有 mainImage 没有 main，则自动包装
+    if (hasMainImage && !hasMain) {
+        processed += """
+            
+            vec4 main(in vec2 fragCoord) {
+                vec4 fragColor;
+                mainImage(fragColor, fragCoord);
+                return fragColor;
+            }
+        """.trimIndent()
+    }
+    
+    return processed
+}
+
 val DefaultShader = """
     uniform float2 iResolution;
     uniform float iTime;

@@ -27,11 +27,12 @@ actual fun ShaderBackground(
         )
 
         val shader = remember(shaderCode) {
+            val processedCode = processShaderCode(shaderCode)
             try {
-                RuntimeShader(shaderCode)
+                RuntimeShader(processedCode)
             } catch (e: Exception) {
                 try {
-                    RuntimeShader(DefaultShader)
+                    RuntimeShader(processShaderCode(DefaultShader))
                 } catch (e2: Exception) {
                     null
                 }

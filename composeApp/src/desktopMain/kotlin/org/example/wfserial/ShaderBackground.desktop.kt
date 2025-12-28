@@ -24,12 +24,13 @@ actual fun ShaderBackground(
     )
 
     val runtimeEffect = remember(shaderCode) {
+        val processedCode = processShaderCode(shaderCode)
         try {
-            RuntimeEffect.makeForShader(shaderCode)
+            RuntimeEffect.makeForShader(processedCode)
         } catch (e: Exception) {
             println("Shader compilation failed: ${e.message}")
             try {
-                RuntimeEffect.makeForShader(DefaultShader)
+                RuntimeEffect.makeForShader(processShaderCode(DefaultShader))
             } catch (e2: Exception) {
                 null
             }
