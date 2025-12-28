@@ -257,7 +257,7 @@ fun SwipeCard(viewModel: SerializerViewModel) {
         contentAlignment = Alignment.Center
     ) {
         // Dynamic background stack effect
-        if (node != null) {
+        if (node != null || conclusion != null) {
             // Third layer
             Box(
                 modifier = Modifier
@@ -300,11 +300,10 @@ fun SwipeCard(viewModel: SerializerViewModel) {
             targetState = node ?: conclusion,
             transitionSpec = {
                 (fadeIn(animationSpec = tween(600)) + 
-                 scaleIn(initialScale = 0.85f, animationSpec = tween(600, easing = BackOutEasing)) +
-                 slideInVertically(initialOffsetY = { it / 3 }, animationSpec = tween(600)))
+                 scaleIn(initialScale = 0.92f, animationSpec = tween(600, easing = BackOutEasing)))
                 .togetherWith(
                     fadeOut(animationSpec = tween(400)) + 
-                    scaleOut(targetScale = 1.05f, animationSpec = tween(400))
+                    scaleOut(targetScale = 1.1f, animationSpec = tween(400))
                 )
             }
         ) { state ->
@@ -492,9 +491,9 @@ fun ConclusionCard(result: String, viewModel: SerializerViewModel) {
 
     Card(
         modifier = Modifier
-            .width(340.dp)
-            .height(520.dp),
-        shape = RoundedCornerShape(32.dp),
+            .width(400.dp)
+            .height(640.dp),
+        shape = RoundedCornerShape(40.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 24.dp)
     ) {
