@@ -60,6 +60,16 @@ android {
         versionCode = 1
         versionName = "1.0"
     }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file(System.getenv("ANDROID_SIGNING_STORE_FILE") ?: "release.keystore")
+            storePassword = System.getenv("ANDROID_SIGNING_STORE_PASSWORD")
+            keyAlias = System.getenv("ANDROID_SIGNING_KEY_ALIAS")
+            keyPassword = System.getenv("ANDROID_SIGNING_KEY_PASSWORD")
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -68,6 +78,7 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
