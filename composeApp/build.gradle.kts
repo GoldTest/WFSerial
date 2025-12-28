@@ -111,3 +111,12 @@ compose.desktop {
         }
     }
 }
+
+tasks.register<Zip>("packageReleasePortable") {
+    group = "compose desktop"
+    description = "Packages the application as a release portable zip file."
+    dependsOn("createReleaseDistributable")
+    from(layout.buildDirectory.dir("compose/binaries/main-release/app"))
+    archiveFileName.set("WFSerial-portable-release.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("compose/binaries/main/zip"))
+}
