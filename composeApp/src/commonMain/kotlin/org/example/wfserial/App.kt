@@ -88,12 +88,52 @@ fun App(viewModel: SerializerViewModel) {
 @Composable
 fun GraphDetailsOverlay(viewModel: SerializerViewModel) {
     val graph = viewModel.activeGraph ?: return
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("确认删除决策图") },
+            text = { Text("确定要删除整个“${graph.name}”决策图吗？此操作不可撤销，且会丢失所有节点配置。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteGraph(graph.id)
+                        showDeleteConfirm = false
+                        viewModel.showGraphDetails = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("彻底删除")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = { viewModel.showGraphDetails = false },
         confirmButton = {
-            TextButton(onClick = { viewModel.showGraphDetails = false }) {
-                Text("关闭")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(
+                    onClick = { showDeleteConfirm = true },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("删除此图")
+                }
+                TextButton(onClick = { viewModel.showGraphDetails = false }) {
+                    Text("关闭")
+                }
             }
         },
         title = {

@@ -127,4 +127,18 @@ class SerializerViewModel {
         history = emptyList()
         saveData()
     }
+
+    fun deleteGraph(graphId: String) {
+        graphs = graphs.filter { it.id != graphId }
+        if (activeGraph?.id == graphId) {
+            activeGraph = graphs.firstOrNull()
+            if (activeGraph != null) {
+                resetGraph()
+            } else {
+                currentNode = null
+                showConclusion = null
+            }
+        }
+        saveData()
+    }
 }
