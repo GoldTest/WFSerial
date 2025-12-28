@@ -84,9 +84,19 @@ compose.desktop {
         mainClass = "MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "WFSerial"
             packageVersion = "1.0.0"
+            vendor = "ExampleVendor"
+            description = "WFSerial Decision App"
+            copyright = "© 2025 ExampleVendor"
+            
+            windows {
+                iconFile.set(project.file("src/desktopMain/resources/icon.svg"))
+                menu = true
+                shortcut = true
+                upgradeUuid = "a1b2c3d4-e5f6-4789-abcd-1234567890ab"
+            }
         }
     }
 }

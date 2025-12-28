@@ -1,0 +1,51 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="1024dp"
+    android:height="1024dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    
+    <!-- Background Diamond -->
+    <path
+        android:fillColor="#6200EE"
+        android:pathData="M512,149.29L874.71,512L512,874.71L149.29,512Z" />
+    
+    <!-- Paths -->
+    <!-- Bottom to Center -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="40"
+        android:strokeLineCap="round"
+        android:pathData="M512,750L512,512" />
+    
+    <!-- Center to Right (YES) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="40"
+        android:strokeLineCap="round"
+        android:pathData="M512,512L674,350" />
+        
+    <!-- Center to Left (NO) - Dashed in SVG, solid here for simplicity or use multiple segments -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="40"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.6"
+        android:pathData="M512,512L350,350" />
+
+    <!-- Nodes -->
+    <!-- Central Node -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M512,512m-60,0a60,60 0,1 1,120 0a60,60 0,1 1,-120 0" />
+    
+    <!-- NO Node (Red) -->
+    <path
+        android:fillColor="#FF5252"
+        android:pathData="M350,350m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0" />
+        
+    <!-- YES Node (Green) -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M674,350m-45,0a45,45 0,1 1,90 0a45,45 0,1 1,-90 0" />
+        
+</vector>
