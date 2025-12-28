@@ -14,7 +14,7 @@ fun main() = application {
     val viewModel = remember { SerializerViewModel() }
     var isOpen by remember { mutableStateOf(true) }
     val icon = remember {
-        useResource("drawable/icon.svg") { 
+        useResource("tray_icon.png") { 
             // Simplified for now, in a real project you'd use a PNG or convert SVG
             // For Desktop Compose, we'll try to load a painter.
             // Since we don't have a converter tool, I'll use a placeholder or assume the user might provide one.
@@ -33,6 +33,7 @@ fun main() = application {
         Window(
             onCloseRequest = { isOpen = false },
             state = state,
+            icon = icon,
             title = "WFSerial",
             resizable = true
         ) {

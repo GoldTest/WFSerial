@@ -92,8 +92,8 @@ compose.desktop {
             copyright = "© 2025 ExampleVendor"
             
             windows {
-                iconFile.set(project.file("src/desktopMain/resources/icon.svg"))
-                menu = true
+                 iconFile.set(project.file("src/desktopMain/resources/icon.ico"))
+                 menu = true
                 shortcut = true
                 upgradeUuid = "a1b2c3d4-e5f6-4789-abcd-1234567890ab"
             }
