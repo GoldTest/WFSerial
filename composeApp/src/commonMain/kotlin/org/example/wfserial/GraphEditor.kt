@@ -212,7 +212,8 @@ fun VisualEditor(
         // Add Node Button
         FloatingActionButton(
             onClick = {
-                val newId = Clock.System.now().toEpochMilliseconds().toString()
+                // 使用 4 位 36 进制字符串作为 ID，既短又足够唯一
+                val newId = Clock.System.now().toEpochMilliseconds().toString(36).takeLast(4).uppercase()
                 // 根据节点数量偏移，避免重叠
                 val offset = (currentNodes.size * 40).toFloat() % 400
                 onEditNode(Node(id = newId, description = "新节点", visualX = 100f + offset, visualY = 100f + offset))
@@ -253,28 +254,41 @@ fun NodeVisual(
     val nodeHeightPx = with(density) { 100.dp.toPx() }
 
     // 使用 rememberUpdatedState 确保闭包始终访问最新的数据和回调
-    val currentNode by rememberUpdatedState(node)
     val currentOnMove by rememberUpdatedState(onMove)
     val currentOnStartConnect by rememberUpdatedState(onStartConnect)
     val currentOnDraggingConnect by rememberUpdatedState(onDraggingConnect)
     val currentOnEndConnect by rememberUpdatedState(onEndConnect)
 
+    // 内部记录当前的坐标，减少外部状态更新的频率感知（如果需要极致流畅可以加，目前先优化更新逻辑）
+    var offsetX by remember(node.id) { mutableStateOf(node.visualX) }
+    var offsetY by remember(node.id) { mutableStateOf(node.visualY) }
+
+    // 同步外部位置变化（比如撤销或其他逻辑导致的移动）
+    LaunchedEffect(node.visualX, node.visualY) {
+        offsetX = node.visualX
+        offsetY = node.visualY
+    }
+
     Box(
         modifier = Modifier
-            .offset { IntOffset(currentNode.visualX.roundToInt(), currentNode.visualY.roundToInt()) }
+            .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
             .width(160.dp)
             .height(100.dp)
-            .pointerInput(Unit) { // 使用 Unit 作为 key，配合 rememberUpdatedState 避免手势丢失
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
-                    currentOnMove(currentNode.visualX + dragAmount.x, currentNode.visualY + dragAmount.y)
-                }
+            .pointerInput(node.id) { 
+                detectDragGestures(
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        offsetX += dragAmount.x
+                        offsetY += dragAmount.y
+                        currentOnMove(offsetX, offsetY)
+                    }
+                )
             }
     ) {
         Card(
             modifier = Modifier.fillMaxSize(),
             colors = CardDefaults.cardColors(
-                containerColor = if (currentNode.isConclusion) 
+                containerColor = if (node.isConclusion) 
                     MaterialTheme.colorScheme.tertiaryContainer 
                 else MaterialTheme.colorScheme.secondaryContainer
             ),
@@ -284,7 +298,7 @@ fun NodeVisual(
             Column(modifier = Modifier.padding(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "ID: ${currentNode.id}", 
+                        "ID: ${node.id}", 
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -297,7 +311,7 @@ fun NodeVisual(
                     }
                 }
                 Text(
-                    text = if (currentNode.isConclusion) "🏁 ${currentNode.result}" else currentNode.description,
+                    text = if (node.isConclusion) "🏁 ${node.result}" else node.description,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 2,
                     fontWeight = FontWeight.Bold,
@@ -306,7 +320,7 @@ fun NodeVisual(
             }
         }
 
-        if (!currentNode.isConclusion) {
+        if (!node.isConclusion) {
             // Connection Ports
             Row(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
@@ -318,14 +332,14 @@ fun NodeVisual(
                         .size(24.dp)
                         .clip(CircleShape)
                         .background(Color.Green.copy(alpha = 0.7f))
-                        .pointerInput(Unit) {
+                        .pointerInput(node.id) {
                             detectDragGestures(
                                 onDragStart = { _ ->
-                                    currentOnStartConnect(true, Offset(currentNode.visualX + nodeWidthPx * 0.25f, currentNode.visualY + nodeHeightPx * 0.8f))
+                                    currentOnStartConnect(true, Offset(offsetX + nodeWidthPx * 0.25f, offsetY + nodeHeightPx * 0.8f))
                                 },
                                 onDrag = { change, _ ->
                                     change.consume()
-                                    val currentGlobal = Offset(currentNode.visualX + nodeWidthPx * 0.25f + change.position.x, currentNode.visualY + nodeHeightPx * 0.8f + change.position.y)
+                                    val currentGlobal = Offset(offsetX + nodeWidthPx * 0.25f + change.position.x, offsetY + nodeHeightPx * 0.8f + change.position.y)
                                     currentOnDraggingConnect(currentGlobal)
                                 },
                                 onDragEnd = { currentOnEndConnect(Offset.Zero) },
@@ -342,14 +356,14 @@ fun NodeVisual(
                         .size(24.dp)
                         .clip(CircleShape)
                         .background(Color.Red.copy(alpha = 0.7f))
-                        .pointerInput(Unit) {
+                        .pointerInput(node.id) {
                             detectDragGestures(
                                 onDragStart = { _ ->
-                                    currentOnStartConnect(false, Offset(currentNode.visualX + nodeWidthPx * 0.75f, currentNode.visualY + nodeHeightPx * 0.8f))
+                                    currentOnStartConnect(false, Offset(offsetX + nodeWidthPx * 0.75f, offsetY + nodeHeightPx * 0.8f))
                                 },
                                 onDrag = { change, _ ->
                                     change.consume()
-                                    val currentGlobal = Offset(currentNode.visualX + nodeWidthPx * 0.75f + change.position.x, currentNode.visualY + nodeHeightPx * 0.8f + change.position.y)
+                                    val currentGlobal = Offset(offsetX + nodeWidthPx * 0.75f + change.position.x, offsetY + nodeHeightPx * 0.8f + change.position.y)
                                     currentOnDraggingConnect(currentGlobal)
                                 },
                                 onDragEnd = { currentOnEndConnect(Offset.Zero) },
@@ -372,7 +386,7 @@ fun ColumnScope.ListEditor(
     onEditNode: (Node) -> Unit
 ) {
     Button(onClick = { 
-        val newId = (Clock.System.now().toEpochMilliseconds() % 10000).toString()
+        val newId = Clock.System.now().toEpochMilliseconds().toString(36).takeLast(4).uppercase()
         onEditNode(Node(id = newId, description = "新节点"))
     }) {
         Icon(Icons.Default.Add, null)
