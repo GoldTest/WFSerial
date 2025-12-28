@@ -409,7 +409,7 @@ fun ActualCard(node: Node, isCurrent: Boolean, viewModel: SerializerViewModel) {
                     icon = Icons.Default.Check,
                     label = "YES",
                     color = Color.Green,
-                    progress = (-swipeProgress).coerceIn(0f, 1f),
+                    progress = swipeProgress.coerceIn(0f, 1f),
                     isLeft = true
                 )
 
@@ -418,7 +418,7 @@ fun ActualCard(node: Node, isCurrent: Boolean, viewModel: SerializerViewModel) {
                     icon = Icons.Default.Close,
                     label = "NO",
                     color = Color.Red,
-                    progress = swipeProgress.coerceIn(0f, 1f),
+                    progress = (-swipeProgress).coerceIn(0f, 1f),
                     isLeft = false
                 )
             }
