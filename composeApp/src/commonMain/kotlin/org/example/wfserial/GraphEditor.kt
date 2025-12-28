@@ -34,10 +34,12 @@ fun GraphEditor(viewModel: SerializerViewModel, initialGraph: Graph? = null) {
     var graphName by remember { mutableStateOf(initialGraph?.name ?: "") }
     var nodes by remember { mutableStateOf(initialGraph?.nodes ?: mapOf<String, Node>()) }
     var startNodeId by remember { mutableStateOf(initialGraph?.startNodeId ?: "") }
+    var customShader by remember { mutableStateOf(initialGraph?.customShader ?: "") }
     
     var showNodeDialog by remember { mutableStateOf(false) }
     var editingNode by remember { mutableStateOf<Node?>(null) }
     var isVisualMode by remember { mutableStateOf(true) }
+    var showShaderEditor by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -48,6 +50,9 @@ fun GraphEditor(viewModel: SerializerViewModel, initialGraph: Graph? = null) {
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(8.dp))
+            IconButton(onClick = { showShaderEditor = !showShaderEditor }) {
+                Icon(Icons.Default.Brush, contentDescription = "编辑背景Shader", tint = if (customShader.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+            }
             IconButton(onClick = { isVisualMode = !isVisualMode }) {
                 Icon(if (isVisualMode) Icons.Default.List else Icons.Default.AccountTree, contentDescription = "切换视图")
             }
@@ -56,7 +61,19 @@ fun GraphEditor(viewModel: SerializerViewModel, initialGraph: Graph? = null) {
         Spacer(Modifier.height(16.dp))
         
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            if (isVisualMode) {
+            if (showShaderEditor) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Text("自定义 AGSL 背景 Shader", style = MaterialTheme.typography.titleMedium)
+                    Text("留空则使用系统默认效果。可用变量: iResolution (float2), iTime (float)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                    OutlinedTextField(
+                        value = customShader,
+                        onValueChange = { customShader = it },
+                        modifier = Modifier.fillMaxSize().padding(top = 8.dp),
+                        placeholder = { Text(DefaultShader) },
+                        textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                    )
+                }
+            } else if (isVisualMode) {
                 VisualEditor(
                     nodes = nodes,
                     onNodesChange = { nodes = it },
@@ -88,7 +105,8 @@ fun GraphEditor(viewModel: SerializerViewModel, initialGraph: Graph? = null) {
                         id = initialGraph?.id ?: Clock.System.now().toEpochMilliseconds().toString(),
                         name = graphName,
                         nodes = nodes,
-                        startNodeId = startNodeId.ifBlank { nodes.keys.first() }
+                        startNodeId = startNodeId.ifBlank { nodes.keys.first() },
+                        customShader = customShader.ifBlank { null }
                     )
                     if (initialGraph != null) {
                         viewModel.updateGraph(finalGraph)
@@ -101,7 +119,7 @@ fun GraphEditor(viewModel: SerializerViewModel, initialGraph: Graph? = null) {
             modifier = Modifier.fillMaxWidth(),
             enabled = graphName.isNotBlank() && nodes.isNotEmpty()
         ) {
-            Text(if (initialGraph != null) "保存修改" else "保存并发布图")
+            Text(if (initialGraph != null) "更新决策图" else "创建决策图")
         }
     }
 

@@ -51,7 +51,10 @@ fun App(viewModel: SerializerViewModel) {
             color = MaterialTheme.colorScheme.background
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                ShaderBackground(modifier = Modifier.fillMaxSize())
+                ShaderBackground(
+                    modifier = Modifier.fillMaxSize(),
+                    shaderCode = viewModel.activeGraph?.customShader ?: DefaultShader
+                )
                 
                 Column(
                     modifier = Modifier.fillMaxSize(),

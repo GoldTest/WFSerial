@@ -19,7 +19,8 @@ data class Graph(
     val id: String,
     val name: String,
     val nodes: Map<String, Node>,
-    val startNodeId: String
+    val startNodeId: String,
+    val customShader: String? = null
 )
 
 @Serializable
