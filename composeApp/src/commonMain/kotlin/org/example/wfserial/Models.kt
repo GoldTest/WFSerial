@@ -9,7 +9,9 @@ data class Node(
     val yesNodeId: String? = null,
     val noNodeId: String? = null,
     val isConclusion: Boolean = false,
-    val result: String? = null
+    val result: String? = null,
+    val visualX: Float = 0f, // For visual editor
+    val visualY: Float = 0f  // For visual editor
 )
 
 @Serializable

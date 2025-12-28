@@ -110,6 +110,14 @@ class SerializerViewModel {
         saveData()
     }
 
+    fun updateGraph(updatedGraph: Graph) {
+        graphs = graphs.map { if (it.id == updatedGraph.id) updatedGraph else it }
+        if (activeGraph?.id == updatedGraph.id) {
+            activeGraph = updatedGraph
+        }
+        saveData()
+    }
+
     fun deleteHistoryEntry(entry: HistoryEntry) {
         history = history.filter { it !== entry }
         saveData()

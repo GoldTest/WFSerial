@@ -398,13 +398,13 @@ fun EditorOverlay(viewModel: SerializerViewModel) {
                             name = "天气决策器",
                             startNodeId = "1",
                             nodes = mapOf(
-                                "1" to Node("1", "今天外面在下雨吗？", yesNodeId = "2", noNodeId = "3"),
-                                "2" to Node("2", "你有雨伞吗？", yesNodeId = "4", noNodeId = "5"),
-                                "3" to Node("3", "你想出去玩吗？", yesNodeId = "6", noNodeId = "7"),
-                                "4" to Node("4", "你可以出门。", isConclusion = true, result = "带伞出门"),
-                                "5" to Node("5", "待在家里吧。", isConclusion = true, result = "留在室内"),
-                                "6" to Node("6", "出发吧！", isConclusion = true, result = "愉快出游"),
-                                "7" to Node("7", "睡个午觉。", isConclusion = true, result = "在家休息")
+                                "1" to Node("1", "今天外面在下雨吗？", yesNodeId = "2", noNodeId = "3", visualX = 200f, visualY = 50f),
+                                "2" to Node("2", "你有雨伞吗？", yesNodeId = "4", noNodeId = "5", visualX = 100f, visualY = 200f),
+                                "3" to Node("3", "你想出去玩吗？", yesNodeId = "6", noNodeId = "7", visualX = 300f, visualY = 200f),
+                                "4" to Node("4", "你可以出门。", isConclusion = true, result = "带伞出门", visualX = 50f, visualY = 350f),
+                                "5" to Node("5", "待在家里吧。", isConclusion = true, result = "留在室内", visualX = 150f, visualY = 350f),
+                                "6" to Node("6", "出发吧！", isConclusion = true, result = "愉快出游", visualX = 250f, visualY = 350f),
+                                "7" to Node("7", "睡个午觉。", isConclusion = true, result = "在家休息", visualX = 350f, visualY = 350f)
                             )
                         )
                         viewModel.addGraph(testGraph)
