@@ -256,60 +256,17 @@ fun SwipeCard(viewModel: SerializerViewModel) {
             .offset(y = (-20).dp),
         contentAlignment = Alignment.Center
     ) {
-        // Dynamic background stack effect
-        if (node != null || conclusion != null) {
-            // Third layer
-            Box(
-                modifier = Modifier
-                    .width(360.dp)
-                    .height(560.dp)
-                    .offset(y = 32.dp)
-                    .scale(0.85f)
-                    .graphicsLayer { alpha = 0.3f }
-                    .clip(RoundedCornerShape(40.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.surfaceVariant,
-                                MaterialTheme.colorScheme.surface
-                            )
-                        )
-                    )
-            )
-            // Second layer
-            Box(
-                modifier = Modifier
-                    .width(380.dp)
-                    .height(600.dp)
-                    .offset(y = 16.dp)
-                    .scale(0.92f)
-                    .graphicsLayer { alpha = 0.6f }
-                    .clip(RoundedCornerShape(40.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.surfaceVariant,
-                                MaterialTheme.colorScheme.surface
-                            )
-                        )
-                    )
-            )
-        }
-
-        AnimatedContent(
-            targetState = node ?: conclusion,
-            transitionSpec = {
-                (fadeIn(animationSpec = tween(600)) + 
-                 scaleIn(initialScale = 0.92f, animationSpec = tween(600, easing = BackOutEasing)))
-                .togetherWith(
-                    fadeOut(animationSpec = tween(400)) + 
-                    scaleOut(targetScale = 1.1f, animationSpec = tween(400))
-                )
-            }
-        ) { state ->
-            when (state) {
-                is Node -> ActualCard(state, viewModel)
-                is String -> ConclusionCard(state, viewModel)
+        // Pre-load all nodes from the active graph
+        activeGraph?.nodes?.values?.forEach { graphNode ->
+            key(graphNode.id) {
+                val isCurrent = node?.id == graphNode.id
+                val isConclusionActive = conclusion != null && graphNode.isConclusion && graphNode.result == conclusion
+                
+                if (graphNode.isConclusion) {
+                    ConclusionCard(graphNode.result ?: "", isConclusionActive, viewModel)
+                } else {
+                    ActualCard(graphNode, isCurrent, viewModel)
+                }
             }
         }
     }
@@ -319,8 +276,19 @@ fun SwipeCard(viewModel: SerializerViewModel) {
 private val BackOutEasing = CubicBezierEasing(0.175f, 0.885f, 0.32f, 1.275f)
 
 @Composable
-fun ActualCard(node: Node, viewModel: SerializerViewModel) {
+fun ActualCard(node: Node, isCurrent: Boolean, viewModel: SerializerViewModel) {
     var offsetX by remember { mutableStateOf(0f) }
+    
+    val alpha by animateFloatAsState(
+        targetValue = if (isCurrent) 1f else 0f,
+        animationSpec = tween(600)
+    )
+    
+    val scale by animateFloatAsState(
+        targetValue = if (isCurrent) 1f else 0.92f,
+        animationSpec = tween(600, easing = BackOutEasing)
+    )
+
     val animatedOffsetX by animateFloatAsState(
         targetValue = offsetX,
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
@@ -337,27 +305,38 @@ fun ActualCard(node: Node, viewModel: SerializerViewModel) {
 
     Card(
         modifier = Modifier
+            .graphicsLayer {
+                this.alpha = alpha
+                this.scaleX = scale
+                this.scaleY = scale
+                // Move off-screen if not current to prevent interaction and overlap issues
+                if (alpha == 0f && !isCurrent) {
+                    this.translationY = 10000f
+                }
+            }
             .offset { IntOffset(animatedOffsetX.roundToInt(), (kotlin.math.abs(animatedOffsetX) * 0.1f).roundToInt()) }
             .rotate(rotation)
             .width(400.dp)
             .height(640.dp)
-            .pointerInput(node.id) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        offsetX += dragAmount.x
-                    },
-                    onDragEnd = {
-                        if (offsetX > 180) {
-                            // Swipe Right -> YES
-                            viewModel.onChoice(true)
-                        } else if (offsetX < -180) {
-                            // Swipe Left -> NO
-                            viewModel.onChoice(false)
+            .pointerInput(node.id, isCurrent) {
+                if (isCurrent) {
+                    detectDragGestures(
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            offsetX += dragAmount.x
+                        },
+                        onDragEnd = {
+                            if (offsetX > 180) {
+                                // Swipe Right -> YES
+                                viewModel.onChoice(true)
+                            } else if (offsetX < -180) {
+                                // Swipe Left -> NO
+                                viewModel.onChoice(false)
+                            }
+                            offsetX = 0f
                         }
-                        offsetX = 0f
-                    }
-                )
+                    )
+                }
             },
         shape = RoundedCornerShape(40.dp),
         border = BorderStroke(2.dp, Brush.linearGradient(
@@ -478,7 +457,7 @@ fun InteractionIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, label
 }
 
 @Composable
-fun ConclusionCard(result: String, viewModel: SerializerViewModel) {
+fun ConclusionCard(result: String, isVisible: Boolean, viewModel: SerializerViewModel) {
     val infiniteTransition = rememberInfiniteTransition()
     val glowScale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -489,8 +468,27 @@ fun ConclusionCard(result: String, viewModel: SerializerViewModel) {
         )
     )
 
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = tween(600)
+    )
+    
+    val scale by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0.92f,
+        animationSpec = tween(600, easing = BackOutEasing)
+    )
+
     Card(
         modifier = Modifier
+            .graphicsLayer {
+                this.alpha = alpha
+                this.scaleX = scale
+                this.scaleY = scale
+                // Move off-screen if not visible
+                if (alpha == 0f && !isVisible) {
+                    this.translationY = 10000f
+                }
+            }
             .width(400.dp)
             .height(640.dp),
         shape = RoundedCornerShape(40.dp),
