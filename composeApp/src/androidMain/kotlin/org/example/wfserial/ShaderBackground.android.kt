@@ -3,6 +3,8 @@ package org.example.wfserial
 import android.graphics.RuntimeShader
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
@@ -50,8 +52,10 @@ actual fun ShaderBackground(
         }
     } else {
         // Fallback for older Android versions
-        androidx.compose.foundation.background(
-            androidx.compose.ui.graphics.Color(0xFF121212)
-        ).let { /* Do nothing, already handled by parent surface usually */ }
+        Box(
+            modifier = modifier.fillMaxSize().background(
+                androidx.compose.ui.graphics.Color(0xFF121212)
+            )
+        )
     }
 }

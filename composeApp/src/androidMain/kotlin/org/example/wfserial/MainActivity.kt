@@ -3,6 +3,7 @@ package org.example.wfserial
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 
@@ -11,7 +12,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         AndroidStorage.context = applicationContext
         setContent {
-            App()
+            val viewModel = remember { SerializerViewModel() }
+            App(viewModel)
         }
     }
 }
@@ -19,5 +21,6 @@ class MainActivity : ComponentActivity() {
 @Preview
 @Composable
 fun AppAndroidPreview() {
-    App()
+    val viewModel = remember { SerializerViewModel() }
+    App(viewModel)
 }
