@@ -67,9 +67,97 @@ fun App(viewModel: SerializerViewModel = remember { SerializerViewModel() }) {
                 if (viewModel.showHistory) {
                     HistoryOverlay(viewModel)
                 }
+
+                if (viewModel.showGraphDetails) {
+                    GraphDetailsOverlay(viewModel)
+                }
             }
         }
     }
+}
+
+@Composable
+fun GraphDetailsOverlay(viewModel: SerializerViewModel) {
+    val graph = viewModel.activeGraph ?: return
+
+    AlertDialog(
+        onDismissRequest = { viewModel.showGraphDetails = false },
+        confirmButton = {
+            TextButton(onClick = { viewModel.showGraphDetails = false }) {
+                Text("关闭")
+            }
+        },
+        title = {
+            Column {
+                Text(graph.name, style = MaterialTheme.typography.headlineSmall)
+                Text("ID: ${graph.id}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        text = {
+            Box(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        Text("节点列表 (${graph.nodes.size})", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    }
+                    items(graph.nodes.values.toList()) { node ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (node.id == graph.startNodeId) 
+                                    MaterialTheme.colorScheme.primaryContainer 
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (node.isConclusion) "🏁 结论" else "📝 节点",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (node.isConclusion) Color(0xFF4CAF50) else MaterialTheme.colorScheme.secondary
+                                    )
+                                    if (node.id == graph.startNodeId) {
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            shape = RoundedCornerShape(4.dp),
+                                            modifier = Modifier.padding(start = 8.dp)
+                                        ) {
+                                            Text("入口", modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary)
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = if (node.isConclusion) node.result ?: "" else node.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (!node.isConclusion) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Column {
+                                            Text("YES →", style = MaterialTheme.typography.labelSmall, color = Color.Green.copy(alpha = 0.7f))
+                                            Text(
+                                                graph.nodes[node.yesNodeId]?.description?.take(15)?.let { "$it..." } ?: "未连接",
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text("NO →", style = MaterialTheme.typography.labelSmall, color = Color.Red.copy(alpha = 0.7f))
+                                            Text(
+                                                graph.nodes[node.noNodeId]?.description?.take(15)?.let { "$it..." } ?: "未连接",
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
 }
 
 @Composable
@@ -94,7 +182,10 @@ fun Header(viewModel: SerializerViewModel) {
         }
         
         Row {
-            IconButton(onClick = { viewModel.showHistory = true }) {
+            IconButton(onClick = { viewModel.showGraphDetails = true }) {
+                    Icon(Icons.Default.Info, "图详情")
+                }
+                IconButton(onClick = { viewModel.showHistory = true }) {
                 Icon(Icons.Default.History, "History")
             }
             IconButton(onClick = { viewModel.isEditing = true }) {
