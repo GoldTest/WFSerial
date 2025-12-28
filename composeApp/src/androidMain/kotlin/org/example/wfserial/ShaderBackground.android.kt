@@ -27,13 +27,25 @@ actual fun ShaderBackground(
         )
 
         val shader = remember(shaderCode) {
-            RuntimeShader(shaderCode)
+            try {
+                RuntimeShader(shaderCode)
+            } catch (e: Exception) {
+                try {
+                    RuntimeShader(DefaultShader)
+                } catch (e2: Exception) {
+                    null
+                }
+            }
         }
 
         Canvas(modifier = modifier.fillMaxSize()) {
-            shader.setFloatUniform("iResolution", size.width, size.height)
-            shader.setFloatUniform("iTime", time)
-            drawRect(brush = ShaderBrush(shader))
+            if (shader != null) {
+                shader.setFloatUniform("iResolution", size.width, size.height)
+                shader.setFloatUniform("iTime", time)
+                drawRect(brush = ShaderBrush(shader))
+            } else {
+                drawRect(color = androidx.compose.ui.graphics.Color(0xFF121212))
+            }
         }
     } else {
         // Fallback for older Android versions

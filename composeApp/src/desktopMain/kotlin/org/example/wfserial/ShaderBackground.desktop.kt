@@ -24,23 +24,37 @@ actual fun ShaderBackground(
     )
 
     val runtimeEffect = remember(shaderCode) {
-        RuntimeEffect.makeForShader(shaderCode)
+        try {
+            RuntimeEffect.makeForShader(shaderCode)
+        } catch (e: Exception) {
+            println("Shader compilation failed: ${e.message}")
+            try {
+                RuntimeEffect.makeForShader(DefaultShader)
+            } catch (e2: Exception) {
+                null
+            }
+        }
     }
 
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
         
-        val shaderBuilder = RuntimeShaderBuilder(runtimeEffect)
-        shaderBuilder.uniform("iResolution", width, height)
-        shaderBuilder.uniform("iTime", time)
-        
-        val shader = shaderBuilder.makeShader()
-        
-        drawContext.canvas.nativeCanvas.drawPaint(
-            org.jetbrains.skia.Paint().apply {
-                this.shader = shader
-            }
-        )
+        if (runtimeEffect != null) {
+            val shaderBuilder = RuntimeShaderBuilder(runtimeEffect)
+            shaderBuilder.uniform("iResolution", width, height)
+            shaderBuilder.uniform("iTime", time)
+            
+            val shader = shaderBuilder.makeShader()
+            
+            drawContext.canvas.nativeCanvas.drawPaint(
+                org.jetbrains.skia.Paint().apply {
+                    this.shader = shader
+                }
+            )
+        } else {
+            // Fallback to solid color if everything fails
+            drawRect(color = androidx.compose.ui.graphics.Color(0xFF121212))
+        }
     }
 }
