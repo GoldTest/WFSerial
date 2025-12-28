@@ -187,20 +187,27 @@ fun VisualEditor(
                         dragEndOffset = offset
                     },
                     onEndConnect = { _ ->
-                        // Check if dropped on another node
-                        val targetNode = currentNodes.values.find { target ->
-                            dragEndOffset.x >= target.visualX && dragEndOffset.x <= target.visualX + nodeWidthPx &&
-                            dragEndOffset.y >= target.visualY && dragEndOffset.y <= target.visualY + nodeHeightPx &&
-                            target.id != draggingConnectionFrom?.first?.id
-                        }
-                        
-                        if (targetNode != null && draggingConnectionFrom != null) {
-                            val (source, isYes) = draggingConnectionFrom!!
-                            val updatedNode = if (isYes) {
-                                source.copy(yesNodeId = targetNode.id, isConclusion = false)
-                            } else {
-                                source.copy(noNodeId = targetNode.id, isConclusion = false)
+                        val connectionInfo = draggingConnectionFrom
+                        if (connectionInfo != null) {
+                            val (source, isYes) = connectionInfo
+                            
+                            // Check if dropped on another node
+                            val targetNode = currentNodes.values.find { target ->
+                                dragEndOffset.x >= target.visualX && dragEndOffset.x <= target.visualX + nodeWidthPx &&
+                                dragEndOffset.y >= target.visualY && dragEndOffset.y <= target.visualY + nodeHeightPx &&
+                                target.id != source.id
                             }
+                            
+                            val updatedNode = if (targetNode != null) {
+                                // 建立或更新连接
+                                if (isYes) source.copy(yesNodeId = targetNode.id, isConclusion = false)
+                                else source.copy(noNodeId = targetNode.id, isConclusion = false)
+                            } else {
+                                // 拖拽到空白区域：删除该端口现有的连接
+                                if (isYes) source.copy(yesNodeId = null)
+                                else source.copy(noNodeId = null)
+                            }
+                            
                             currentOnNodesChange(currentNodes + (source.id to updatedNode))
                         }
                         draggingConnectionFrom = null
