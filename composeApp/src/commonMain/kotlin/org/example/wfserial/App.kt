@@ -27,6 +27,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Shadow
+
 @Composable
 fun App(viewModel: SerializerViewModel) {
     MaterialTheme(
@@ -199,61 +208,100 @@ fun Header(viewModel: SerializerViewModel) {
 fun SwipeCard(viewModel: SerializerViewModel) {
     val node = viewModel.currentNode
     val conclusion = viewModel.showConclusion
+    val activeGraph = viewModel.activeGraph
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .offset(y = (-40).dp), // Visual centering: move up slightly
+            .offset(y = (-20).dp),
         contentAlignment = Alignment.Center
     ) {
-        // Background Stack effect
-        Box(
-            modifier = Modifier
-                .width(320.dp)
-                .height(480.dp)
-                .offset(y = 12.dp)
-                .scale(0.95f)
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
-        )
+        // Dynamic background stack effect
+        if (node != null) {
+            // Third layer
+            Box(
+                modifier = Modifier
+                    .width(360.dp)
+                    .height(560.dp)
+                    .offset(y = 32.dp)
+                    .scale(0.85f)
+                    .graphicsLayer { alpha = 0.3f }
+                    .clip(RoundedCornerShape(40.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surfaceVariant,
+                                MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    )
+            )
+            // Second layer
+            Box(
+                modifier = Modifier
+                    .width(380.dp)
+                    .height(600.dp)
+                    .offset(y = 16.dp)
+                    .scale(0.92f)
+                    .graphicsLayer { alpha = 0.6f }
+                    .clip(RoundedCornerShape(40.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surfaceVariant,
+                                MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    )
+            )
+        }
 
         AnimatedContent(
             targetState = node ?: conclusion,
             transitionSpec = {
-                (fadeIn(animationSpec = tween(500, easing = LinearOutSlowInEasing)) + 
-                 scaleIn(initialScale = 0.8f, animationSpec = tween(500)) +
-                 slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(500)))
+                (fadeIn(animationSpec = tween(600)) + 
+                 scaleIn(initialScale = 0.85f, animationSpec = tween(600, easing = BackOutEasing)) +
+                 slideInVertically(initialOffsetY = { it / 3 }, animationSpec = tween(600)))
                 .togetherWith(
-                    fadeOut(animationSpec = tween(300)) + 
-                    scaleOut(targetScale = 1.1f, animationSpec = tween(300))
+                    fadeOut(animationSpec = tween(400)) + 
+                    scaleOut(targetScale = 1.05f, animationSpec = tween(400))
                 )
             }
         ) { state ->
-            if (state is Node) {
-                ActualCard(state, viewModel)
-            } else if (state is String) {
-                ConclusionCard(state, viewModel)
+            when (state) {
+                is Node -> ActualCard(state, viewModel)
+                is String -> ConclusionCard(state, viewModel)
             }
         }
     }
 }
+
+// BackOutEasing is similar to Overshoot
+private val BackOutEasing = CubicBezierEasing(0.175f, 0.885f, 0.32f, 1.275f)
 
 @Composable
 fun ActualCard(node: Node, viewModel: SerializerViewModel) {
     var offsetX by remember { mutableStateOf(0f) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = offsetX,
-        animationSpec = spring(stiffness = Spring.StiffnessLow)
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
     )
     
-    val rotation = animatedOffsetX / 20f
+    val rotation = animatedOffsetX / 25f
+    val swipeProgress = (offsetX / 200f).coerceIn(-1f, 1f)
     
+    val borderColor = when {
+        swipeProgress > 0.1f -> Color.Green.copy(alpha = swipeProgress)
+        swipeProgress < -0.1f -> Color.Red.copy(alpha = -swipeProgress)
+        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+    }
+
     Card(
         modifier = Modifier
-            .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
+            .offset { IntOffset(animatedOffsetX.roundToInt(), (kotlin.math.abs(animatedOffsetX) * 0.1f).roundToInt()) }
             .rotate(rotation)
-            .width(340.dp)
-            .height(520.dp)
+            .width(400.dp)
+            .height(640.dp)
             .pointerInput(node.id) {
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
@@ -261,94 +309,221 @@ fun ActualCard(node: Node, viewModel: SerializerViewModel) {
                         offsetX += dragAmount.x
                     },
                     onDragEnd = {
-                        if (offsetX < -150) {
-                            // Swipe Left -> YES
+                        if (offsetX > 180) {
+                            // Swipe Right -> YES
                             viewModel.onChoice(true)
-                        } else if (offsetX > 150) {
-                            // Swipe Right -> NO
+                        } else if (offsetX < -180) {
+                            // Swipe Left -> NO
                             viewModel.onChoice(false)
                         }
                         offsetX = 0f
                     }
                 )
             },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        shape = RoundedCornerShape(40.dp),
+        border = BorderStroke(2.dp, Brush.linearGradient(
+            colors = listOf(borderColor, borderColor.copy(alpha = 0.3f))
+        )),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize().padding(32.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+                        ),
+                        start = Offset(0f, 0f),
+                        end = Offset(1000f, 1000f)
+                    )
+                )
+                .drawBehind {
+                    // Subtle glow effect
+                    drawCircle(
+                        color = borderColor.copy(alpha = 0.05f),
+                        radius = size.maxDimension / 2,
+                        center = center
+                    )
+                }
+                .padding(32.dp)
+        ) {
+            // Question Label
+            Surface(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                Text(
+                    "DECISION",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 2.sp
+                )
+            }
+
             Text(
                 text = node.description,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    shadow = Shadow(color = Color.Black.copy(alpha = 0.3f), blurRadius = 8f, offset = Offset(2f, 2f))
+                ),
                 textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
                 modifier = Modifier.align(Alignment.Center)
             )
             
-            // YES indicator (Shows when swiping left, positioned on the right)
-            Text(
-                text = "YES",
-                color = Color.Green.copy(alpha = ((-offsetX / 150f).coerceIn(0f, 1f))),
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.ExtraBold,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .rotate(15f)
-            )
+            // Interaction Indicators
+            Row(
+                modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // NO Side (Left)
+                InteractionIcon(
+                    icon = Icons.Default.Close,
+                    label = "NO",
+                    color = Color.Red,
+                    progress = (-swipeProgress).coerceIn(0f, 1f),
+                    isLeft = true
+                )
 
-            // NO indicator (Shows when swiping right, positioned on the left)
-            Text(
-                text = "NO",
-                color = Color.Red.copy(alpha = ((offsetX / 150f).coerceIn(0f, 1f))),
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.ExtraBold,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .rotate(-15f)
-            )
+                // YES Side (Right)
+                InteractionIcon(
+                    icon = Icons.Default.Check,
+                    label = "YES",
+                    color = Color.Green,
+                    progress = swipeProgress.coerceIn(0f, 1f),
+                    isLeft = false
+                )
+            }
         }
     }
 }
 
 @Composable
+fun InteractionIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, color: Color, progress: Float, isLeft: Boolean) {
+    val scale = 0.9f + (progress * 0.4f)
+    val alpha = 0.3f + (progress * 0.7f)
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .scale(scale)
+            .graphicsLayer { this.alpha = alpha }
+    ) {
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.15f))
+                .drawBehind {
+                    if (progress > 0.1f) {
+                        drawCircle(color = color.copy(alpha = progress * 0.25f), radius = size.minDimension * 0.9f)
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(48.dp))
+        }
+        Text(
+            label,
+            color = color,
+            fontWeight = FontWeight.ExtraBold,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(top = 12.dp)
+        )
+    }
+}
+
+@Composable
 fun ConclusionCard(result: String, viewModel: SerializerViewModel) {
+    val infiniteTransition = rememberInfiniteTransition()
+    val glowScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
     Card(
         modifier = Modifier
             .width(340.dp)
             .height(520.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+        shape = RoundedCornerShape(32.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 24.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.sweepGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.secondaryContainer,
+                            MaterialTheme.colorScheme.tertiaryContainer,
+                            MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    )
+                )
+                .padding(32.dp)
         ) {
-            Icon(
-                Icons.Default.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.height(24.dp))
-            Text(
-                text = "达成事实",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = result,
-                style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(48.dp))
-            Button(
-                onClick = { viewModel.resetGraph() },
-                shape = RoundedCornerShape(12.dp)
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Text("重新开始")
+                Box(contentAlignment = Alignment.Center) {
+                    // Glow effect
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .scale(glowScale)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), CircleShape)
+                    )
+                    Icon(
+                        Icons.Default.Stars,
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                
+                Spacer(Modifier.height(32.dp))
+                
+                Text(
+                    text = "恭喜！达成结论",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 4.sp
+                )
+                
+                Spacer(Modifier.height(16.dp))
+                
+                Text(
+                    text = result,
+                    style = MaterialTheme.typography.headlineLarge,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                
+                Spacer(Modifier.height(64.dp))
+                
+                Button(
+                    onClick = { viewModel.resetGraph() },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.Default.Refresh, null)
+                    Spacer(Modifier.width(12.dp))
+                    Text("再次开启决策之旅", fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

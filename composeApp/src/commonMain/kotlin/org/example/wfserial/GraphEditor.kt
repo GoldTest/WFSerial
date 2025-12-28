@@ -336,15 +336,18 @@ fun NodeVisual(
         }
 
         if (!node.isConclusion) {
-            // Connection Ports
-            Row(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            // Connection Ports aligned with line start points (25% and 75% width, 80% height)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(24.dp)
+                    .offset(y = 80.dp - 12.dp) // Center at 80% of 100dp
             ) {
-                // YES Port
+                // YES Port (Left side at 25%)
                 Box(
                     modifier = Modifier
                         .size(24.dp)
+                        .offset(x = 40.dp - 12.dp) // Center at 25% of 160dp
                         .clip(CircleShape)
                         .background(Color.Green.copy(alpha = 0.7f))
                         .pointerInput(node.id) {
@@ -365,10 +368,11 @@ fun NodeVisual(
                     Text("Y", modifier = Modifier.align(Alignment.Center), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
 
-                // NO Port
+                // NO Port (Right side at 75%)
                 Box(
                     modifier = Modifier
                         .size(24.dp)
+                        .offset(x = 120.dp - 12.dp) // Center at 75% of 160dp
                         .clip(CircleShape)
                         .background(Color.Red.copy(alpha = 0.7f))
                         .pointerInput(node.id) {
