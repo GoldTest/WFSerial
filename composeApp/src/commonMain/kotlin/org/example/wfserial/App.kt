@@ -38,57 +38,67 @@ import androidx.compose.ui.graphics.Shadow
 
 @Composable
 fun App(viewModel: SerializerViewModel) {
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = Color(0xFFBB86FC),
-            secondary = Color(0xFF03DAC6),
-            background = Color(0xFF121212),
-            surface = Color(0xFF1E1E1E)
-        )
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+    val configuration = rememberPlatformConfiguration()
+    
+    CompositionLocalProvider(LocalPlatformConfiguration provides configuration) {
+        MaterialTheme(
+            colorScheme = darkColorScheme(
+                primary = Color(0xFFBB86FC),
+                secondary = Color(0xFF03DAC6),
+                background = Color(0xFF121212),
+                surface = Color(0xFF1E1E1E)
+            )
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                ShaderBackground(
-                    modifier = Modifier.fillMaxSize(),
-                    shaderCode = viewModel.activeGraph?.customShader ?: DefaultShader
-                )
-                
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Header(viewModel)
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    ShaderBackground(
+                        modifier = Modifier.fillMaxSize(),
+                        shaderCode = viewModel.activeGraph?.customShader ?: DefaultShader
+                    )
                     
-                    Box(
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        contentAlignment = Alignment.Center
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (viewModel.activeGraph == null) {
-                            EmptyState(viewModel)
-                        } else {
-                            SwipeCard(viewModel)
+                        Header(viewModel)
+                        
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (viewModel.activeGraph == null) {
+                                EmptyState(viewModel)
+                            } else {
+                                SwipeCard(viewModel)
+                            }
                         }
                     }
-                }
 
-                if (viewModel.isEditing) {
-                    EditorOverlay(viewModel)
-                }
-                
-                if (viewModel.showHistory) {
-                    HistoryOverlay(viewModel)
-                }
+                    if (viewModel.isEditing) {
+                        EditorOverlay(viewModel)
+                    }
+                    
+                    if (viewModel.showHistory) {
+                        HistoryOverlay(viewModel)
+                    }
 
-                if (viewModel.showGraphDetails) {
-                    GraphDetailsOverlay(viewModel)
+                    if (viewModel.showGraphDetails) {
+                        GraphDetailsOverlay(viewModel)
+                    }
                 }
             }
         }
     }
 }
+
+@Composable
+expect fun rememberPlatformConfiguration(): PlatformConfig
+
+// BackOutEasing is similar to Overshoot
+private val BackOutEasing = CubicBezierEasing(0.175f, 0.885f, 0.32f, 1.275f)
 
 @Composable
 fun GraphDetailsOverlay(viewModel: SerializerViewModel) {
@@ -255,6 +265,11 @@ fun SwipeCard(viewModel: SerializerViewModel) {
     val conclusion = viewModel.showConclusion
     val activeGraph = viewModel.activeGraph
 
+    // Use platform-specific configuration for card size
+    val configuration = LocalPlatformConfiguration.current
+    val cardWidth = configuration.cardWidth
+    val cardHeight = configuration.cardHeight
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -268,21 +283,34 @@ fun SwipeCard(viewModel: SerializerViewModel) {
                 val isConclusionActive = conclusion != null && graphNode.isConclusion && graphNode.result == conclusion
                 
                 if (graphNode.isConclusion) {
-                    ConclusionCard(graphNode.result ?: "", isConclusionActive, viewModel)
+                    ConclusionCard(graphNode.result ?: "", isConclusionActive, viewModel, cardWidth, cardHeight)
                 } else {
-                    ActualCard(graphNode, isCurrent, viewModel)
+                    ActualCard(graphNode, isCurrent, viewModel, cardWidth, cardHeight)
                 }
             }
         }
     }
 }
 
-// BackOutEasing is similar to Overshoot
-private val BackOutEasing = CubicBezierEasing(0.175f, 0.885f, 0.32f, 1.275f)
+// Platform configuration system
+data class PlatformConfig(
+    val cardWidth: androidx.compose.ui.unit.Dp,
+    val cardHeight: androidx.compose.ui.unit.Dp,
+    val swipeThreshold: Float
+)
+
+val LocalPlatformConfiguration = staticCompositionLocalOf {
+    PlatformConfig(
+        cardWidth = 400.dp,
+        cardHeight = 640.dp,
+        swipeThreshold = 180f
+    )
+}
 
 @Composable
-fun ActualCard(node: Node, isCurrent: Boolean, viewModel: SerializerViewModel) {
+fun ActualCard(node: Node, isCurrent: Boolean, viewModel: SerializerViewModel, cardWidth: androidx.compose.ui.unit.Dp = 400.dp, cardHeight: androidx.compose.ui.unit.Dp = 640.dp) {
     var offsetX by remember { mutableStateOf(0f) }
+    val configuration = LocalPlatformConfiguration.current
     
     val alpha by animateFloatAsState(
         targetValue = if (isCurrent) 1f else 0f,
@@ -321,8 +349,8 @@ fun ActualCard(node: Node, isCurrent: Boolean, viewModel: SerializerViewModel) {
             }
             .offset { IntOffset(animatedOffsetX.roundToInt(), (kotlin.math.abs(animatedOffsetX) * 0.1f).roundToInt()) }
             .rotate(rotation)
-            .width(400.dp)
-            .height(640.dp)
+            .width(cardWidth)
+            .height(cardHeight)
             .pointerInput(node.id, isCurrent) {
                 if (isCurrent) {
                     detectDragGestures(
@@ -331,10 +359,10 @@ fun ActualCard(node: Node, isCurrent: Boolean, viewModel: SerializerViewModel) {
                             offsetX += dragAmount.x
                         },
                         onDragEnd = {
-                            if (offsetX > 180) {
+                            if (offsetX > configuration.swipeThreshold) {
                                 // Swipe Right -> YES
                                 viewModel.onChoice(true)
-                            } else if (offsetX < -180) {
+                            } else if (offsetX < -configuration.swipeThreshold) {
                                 // Swipe Left -> NO
                                 viewModel.onChoice(false)
                             }
@@ -462,7 +490,7 @@ fun InteractionIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, label
 }
 
 @Composable
-fun ConclusionCard(result: String, isVisible: Boolean, viewModel: SerializerViewModel) {
+fun ConclusionCard(result: String, isVisible: Boolean, viewModel: SerializerViewModel, cardWidth: androidx.compose.ui.unit.Dp = 400.dp, cardHeight: androidx.compose.ui.unit.Dp = 640.dp) {
     val infiniteTransition = rememberInfiniteTransition()
     val glowScale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -494,8 +522,8 @@ fun ConclusionCard(result: String, isVisible: Boolean, viewModel: SerializerView
                     this.translationY = 10000f
                 }
             }
-            .width(400.dp)
-            .height(640.dp),
+            .width(cardWidth)
+            .height(cardHeight),
         shape = RoundedCornerShape(40.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 24.dp)

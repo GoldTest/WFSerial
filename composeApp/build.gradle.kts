@@ -57,8 +57,8 @@ android {
         applicationId = "org.example.wfserial"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
     }
 
     signingConfigs {
@@ -97,7 +97,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "WFSerial"
-            packageVersion = "1.0.3"
+            packageVersion = "1.0.4"
             vendor = "ExampleVendor"
             description = "WFSerial Decision App"
             copyright = "© 2025 ExampleVendor"
