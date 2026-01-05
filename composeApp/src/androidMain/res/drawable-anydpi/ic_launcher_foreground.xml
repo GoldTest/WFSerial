@@ -1,51 +1,37 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="1024dp"
-    android:height="1024dp"
+    android:width="108dp"
+    android:height="108dp"
     android:viewportWidth="1024"
     android:viewportHeight="1024">
     
-    <!-- Background Diamond - Full Fill -->
+    <!-- Paths and Circles from icon.svg -->
+    <!-- Solid parts -->
     <path
-        android:fillColor="#6200EE"
-        android:pathData="M512,0L1024,512L512,1024L0,512Z" />
-    
-    <!-- Paths - Scaled up -->
-    <!-- Bottom to Center -->
-    <path
+        android:pathData="M300,300L724,724"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="50"
-        android:strokeLineCap="round"
-        android:pathData="M512,850L512,512" />
-    
-    <!-- Center to Right (YES) -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="50"
-        android:strokeLineCap="round"
-        android:pathData="M512,512L744,280" />
-        
-    <!-- Center to Left (NO) -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="50"
-        android:strokeLineCap="round"
-        android:strokeAlpha="0.6"
-        android:pathData="M512,512L280,280" />
-
-    <!-- Nodes -->
-    <!-- Central Node -->
+        android:strokeWidth="80"
+        android:strokeLineCap="round"/>
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M512,512m-80,0a80,80 0,1 1,160 0a80,80 0,1 1,-160 0" />
-    
-    <!-- NO Node (Red) -->
+        android:pathData="M300,300m-80,0a80,80 0,1 1,160 0a80,80 0,1 1,-160 0"/>
     <path
-        android:fillColor="#FF5252"
-        android:pathData="M280,280m-60,0a60,60 0,1 1,120 0a60,60 0,1 1,-120 0" />
-        
-    <!-- YES Node (Green) -->
+        android:fillColor="#FFFFFF"
+        android:pathData="M724,724m-80,0a80,80 0,1 1,160 0a80,80 0,1 1,-160 0"/>
+
+    <!-- Translucent parts (opacity 0.3) -->
     <path
-        android:fillColor="#4CAF50"
-        android:pathData="M744,280m-65,0a65,65 0,1 1,130 0a65,65 0,1 1,-130 0" />
-        
+        android:pathData="M300,724L724,300"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="80"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.3"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.3"
+        android:pathData="M300,724m-80,0a80,80 0,1 1,160 0a80,80 0,1 1,-160 0"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.3"
+        android:pathData="M724,300m-80,0a80,80 0,1 1,160 0a80,80 0,1 1,-160 0"/>
+
 </vector>
